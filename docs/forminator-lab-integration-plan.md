@@ -1,6 +1,6 @@
 # Forminator → ThinkingCap Lab Integration Plan
 
-**Status:** Phase 0 ✅ `3a2ad43` · Phase 1 ✅ `6ac5145` · Phase 2 ✅ (tc-surface-forms, standalone-verified) · Phase 3 ✅ (phoenix `04fe472` + tc-lab `c4c04f1`, 2026-09-02) · Phase 4 ✅ code complete 2026-09-07 (operator deploy pending)
+**Status:** Phase 0 ✅ `3a2ad43` · Phase 1 ✅ `6ac5145` · Phase 2 ✅ (tc-surface-forms, standalone-verified) · Phase 3 ✅ (phoenix `04fe472` + tc-lab `c4c04f1`, 2026-09-02) · Phase 4 ✅ code complete 2026-09-07 (operator deploy pending) · Phase 5 ✅ code complete 2026-09-10 (tc-console `7434704` pushed srv, operator deploy pending)
 
 **Goal (Campbell's two gaps):**
 1. **Schema authoring standard** — how to write JSON Schemas so an AI asks the right questions and enums project to the right widget (radio / single-choice / dropdown / checkbox).
@@ -236,8 +236,67 @@ Scaffold: `bash tc-surface-template/scaffold.sh forms` → repo `tc-surface-form
 3. Boolean-false quirk → fixed architecturally (answered-set, chip payloads) in both runtimes.
 4. Draft mismatch (2020-12 files vs draft-07 edit prompt) → standardize 2020-12; worker loads draft-07 via `ajv-draft-07` fallback; lint flags mixed trios.
 5. `x-options-source: db|app` in v1 → chat skips chips, form placeholder picker; real db-backed options reserved as a seam (no LMS sinks in v1).
-6. Three field-plan implementations (phoenix `computeChoices`, surface `fieldPlan.ts`, Forminator `fieldPlan.js`) → one normative standard doc + cross-referencing headers; divergence = verification failure.
+6. Three field-plan implementations (phoenix `computeChoices`, surface `fieldPlan.ts`, Forminator `fieldPlan.js`) → one normative standard doc + cross-referencing headers; divergence = verification failure. **(Phase 5 adds a fourth: tc-console's vendored formcast copy — same rule.)**
 7. `x-depends-on` cycles → lint-time error; runtime evaluates pure per-turn (never loops).
+
+---
+
+## Phase 5 — FormCast: forms stop being an iframe surface; Home becomes the canvas
+
+> **CODE COMPLETE 2026-09-10 — tc-console `7434704` pushed to srv main
+> (operator web deploy gated, as always).** Campbell's call: the form surface
+> is no longer a surface — form-like interactions render NATIVELY in tab zero
+> (the merged Home/Canvas) with no iframe, extending the guest view's rule
+> ("THE FORM LIVES IN THE CANVAS AREA… forms belong to the canvas",
+> `tc-console/src/guest/GuestChat.tsx`) to the operator Lab. Decisions locked
+> with Campbell: **vendor** the components into tc-console (a MOVE — the
+> tc-surface-forms app retires after the pilot; its worker stays as the data
+> plane) and **kill-switch pilot** (`?formsIframe=1` /
+> `localStorage['tc-lab.formsIframe']='1'` restores the iframe path).
+>
+> - **`tc-console/src/home/formcast/`** — `Form/*` vendored verbatim
+>   (provenance headers; fieldPlan is now the FOURTH normative runtime —
+>   risk #6); `FillView`/`RecordsView` adapted from postMessage bridge to
+>   props (`FormCastView`/`RecordsCastView`); `FormCast.tsx` shell owns view
+>   state, the command pump (batches sequence onto the loaded schema; every
+>   batch answered, incl. an error-applier when the schema 404s), the
+>   `.tc-coach-flash` CSS + `[Show me]` anchor highlight; `api.ts` uses the
+>   **console session bearer** — the worker's `requireAuth` verifies Phoenix
+>   sessions directly (`tokenSource:'browser'`, writes allowed) — with the
+>   minted `surface-browser` token as 401 fallback (its mint doubles as
+>   apiBaseUrl discovery + the `surface_open` stamp).
+> - **One routing seam in `useSurfaces`** — `openSurface` / `launchSurface` /
+>   `showInSurface` / `deliverSurfaceCommands` route `surface==='forms'` to
+>   the cast via a ref the App fills (kill-switch leaves it null → iframe
+>   path verbatim). Covers markers, launcher, [Show me], surfaceActions,
+>   record deep links, saved/pinned opens. `Chat.tsx` needed NO changes.
+> - **HomeCanvas third occupant** — cast > scene > start doc,
+>   last-projection-wins (a fresh scene takes the canvas back; the cast stays
+>   mounted-hidden, fill intact). HomeSurface stays mounted as before.
+>   Dismiss restores the previous base and fails unanswered batches instead
+>   of hanging their cards.
+> - **Phoenix + worker: UNTOUCHED.** `surfaceActions`/`surfaceContext` are
+>   transport-neutral; the forms surface registration STAYS (grant + catalog
+>   + command switch, not the iframe; do NOT mark it `native` — the mints
+>   refuse native and that would kill `surface_command`'s worker hop).
+> - **Pre-existing bug found + fixed in the same commit:** the console has
+>   always sent live-surface reports keyed `surfaceId`, but Phoenix's
+>   `parseLiveSurfaces` has required `id` since `3a20310` (08-11) — every
+>   report was silently dropped, so the LIVE SURFACES prompt section AND the
+>   forms collection reconcile never worked through the console (the Phase 3
+>   verifications passed via the `choiceAnswer` path, which writes
+>   collections directly). `getSurfaceContexts` now bridges `surfaceId → id`.
+> - **Verified:** tsc clean, vite build clean. E2E:
+>   `tc-console/docs/E2E-FORMCAST.md` (28 checks incl. kill-switch spots).
+> - **Remaining (operator-gated):** console web deploy; Campbell runs the
+>   E2E; then retire the tc-surface-forms APP (Caddy `/forms`, app unit 8107,
+>   app image; svc 3037 STAYS — worker-only repo) and mark the app image roll
+>   `forms-20260907-212950-c678c24` superseded (reveal rides in the cast).
+> - **Non-goals (v1):** Work-with-me pick FROM the form (`data-home-pick`
+>   retrofit); guest view (already has its own cast); cast survives no reload
+>   (chips + PG collection restore the conversation; next event re-opens).
+> - Plan-of-record for the change:
+>   `~/.claude/plans/2026-09-10-forminator-home-canvas.md`.
 
 ## Critical files
 
