@@ -1,6 +1,6 @@
 # Forminator → ThinkingCap Lab Integration Plan
 
-**Status:** Phase 0 ✅ `3a2ad43` · Phase 1 ✅ `6ac5145` · Phase 2 ✅ (tc-surface-forms, standalone-verified) · Phase 3 ✅ (phoenix `04fe472` + tc-lab `c4c04f1`, 2026-09-02) · Phase 4 ✅ code complete 2026-09-07 (operator deploy pending) · Phase 5 ✅ code complete 2026-09-10 (tc-console `7434704` pushed srv, operator deploy pending)
+**Status:** Phase 0 ✅ `3a2ad43` · Phase 1 ✅ `6ac5145` · Phase 2 ✅ (tc-surface-forms, standalone-verified) · Phase 3 ✅ (phoenix `04fe472` + tc-lab `c4c04f1`, 2026-09-02) · Phase 4 ✅ code complete 2026-09-07 (operator deploy pending) · Phase 5 ✅ **LIVE 2026-09-11** (tc-console `7434704`→`ede0124` + phoenix `d8b71db`; browser E2E in progress)
 
 **Goal (Campbell's two gaps):**
 1. **Schema authoring standard** — how to write JSON Schemas so an AI asks the right questions and enums project to the right widget (radio / single-choice / dropdown / checkbox).
@@ -288,8 +288,31 @@ Scaffold: `bash tc-surface-template/scaffold.sh forms` → repo `tc-surface-form
 >   collections directly). `getSurfaceContexts` now bridges `surfaceId → id`.
 > - **Verified:** tsc clean, vite build clean. E2E:
 >   `tc-console/docs/E2E-FORMCAST.md` (28 checks incl. kill-switch spots).
-> - **Remaining (operator-gated):** console web deploy; Campbell runs the
->   E2E; then retire the tc-surface-forms APP (Caddy `/forms`, app unit 8107,
+> - **LIVE 2026-09-11 — pilot running.** Follow-up fixes shipped the same
+>   day, all rolled: `f8acd17` (first-open race — cast awaited no API
+>   discovery, `new URL('')` threw on the very first cast of a browser
+>   session), `a00ec93` (descriptions opt-in behind ⓘ toggles; E2E #10
+>   amended, #29 added), and **`ede0124` + phoenix `d8b71db`** (dismissed
+>   forms haunted the chat: console only sent `surfaceContext` when
+>   non-empty, so "nothing open" was indistinguishable from "client doesn't
+>   track surfaces", and phoenix's `app_form_collection` rows were only
+>   ever upserted — now console reports every turn and phoenix's
+>   `dropDismissedCollections` deletes collecting rows no forms entry
+>   reports; fill OR records view counts as open; E2E #30 added).
+> - **Schema trios corrected against the live LMS (v2, in Azure):**
+>   `users/manage-users/add-single-user` + `users/access/user-basic`
+>   rewritten from the verified save code
+>   (`Campus/Registrar/AccountDetails.aspx.cs`) and Stable_LMS-1 — fictional
+>   fields out (`preventAutoInactivation`, `sendRegistrationEmail`), real
+>   columns in (`OutsideEmail`, `Language`, `BlockDomainAnnouncements`,
+>   `CreationDate`, `CreationMethod` codes 100–112, `LastLoginDevice`),
+>   `statusLocked`/`noEmailAccount`/`displayId`/`inactivatedAfterNoLogin`
+>   added, `emailForwarding` split into `forwardEmail`+`forwardingAddress`.
+>   Lint 100 / 95; user-basic sample is the real Campbell Macmillan record.
+>   Adapter note for the edit flow: `Users.CustomFields` XML stores field
+>   ids DASHLESS+lowercase; Document-type metadata fields can't round-trip
+>   as strings.
+> - **Remaining (operator-gated):** Campbell runs the E2E (30 checks); then retire the tc-surface-forms APP (Caddy `/forms`, app unit 8107,
 >   app image; svc 3037 STAYS — worker-only repo) and mark the app image roll
 >   `forms-20260907-212950-c678c24` superseded (reveal rides in the cast).
 > - **Non-goals (v1):** Work-with-me pick FROM the form (`data-home-pick`
