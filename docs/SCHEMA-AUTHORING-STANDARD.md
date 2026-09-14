@@ -38,6 +38,11 @@ Authoring rules carried over from TCOV:
   `adminUrl`, and `x-thinkingcap` describe where a settings document lives and who
   may edit it. Runtimes **must ignore them** — they never influence inclusion,
   ordering, or widget choice. They are authoring metadata, not runtime vocabulary.
+- **Runtime exception — the `settings/*` dir convention.** A schema whose blob
+  dir sits under `settings/` IS runtime-relevant: it is *domain-scoped*.
+  Runtimes gate the form on a domain (LMS branch) pick before rendering, load
+  the picked branch's current values, and stamp submitted records with the
+  domain. Schemas carry no marker for this — the convention is the dir.
 
 ## 2. Schema draft
 
